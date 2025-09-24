@@ -6,7 +6,9 @@ import com.santander.desafio.agencia_api.adapters.in.web.dto.RegisterAgencyRespo
 import com.santander.desafio.agencia_api.domain.model.Coordinate;
 import com.santander.desafio.agencia_api.domain.port.in.ComputeDistancesUseCase;
 import com.santander.desafio.agencia_api.domain.port.in.RegisterAgencyUseCase;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/desafio")
+@Slf4j
 public class AgencyController {
     private final RegisterAgencyUseCase registerUC;
     private final ComputeDistancesUseCase computeUC;
@@ -27,9 +30,10 @@ public class AgencyController {
         this.registerUC = registerUC; this.computeUC = computeUC;
     }
 
-
+    @Operation(summary = "Cadastra uma agência")
     @PostMapping("/cadastrar")
     public ResponseEntity<RegisterAgencyResponse> register(@Valid @RequestBody RegisterAgencyRequest req) {
+        log.info("POST /desafio/cadastrar posX={} posY={} name?={}", req.posX(), req.posY(), req.name() != null);
         var agency = registerUC.register(new Coordinate(req.posX(), req.posY()));
         var resp = new RegisterAgencyResponse(
                 agency.getId(),
@@ -39,9 +43,10 @@ public class AgencyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(resp);
     }
 
-
+    @Operation(summary = "Distância entre Usuario e Agências")
     @GetMapping("/distancia")
     public ResponseEntity<List<AgencyDistanceView>> distances(@RequestParam double posX, @RequestParam double posY) {
+        log.info("GET /desafio/distancia posX={} posY={}", posX, posY);
         var list = computeUC.compute(new Coordinate(posX, posY)).stream()
                 .map(d -> new AgencyDistanceView(d.agencyId(), String.format(Locale.US, "%.2f", d.distance())))
                 .toList();
@@ -50,6 +55,7 @@ public class AgencyController {
 
     @GetMapping("/distancia/v1")
     public ResponseEntity<Map<String, String>> distancesLegacyFormat(@RequestParam double posX, @RequestParam double posY) {
+        log.info("GET /desafio/distancia/v1 posX={} posY={}", posX, posY);
         var ordered = new LinkedHashMap<String, String>();
         var distances = computeUC.compute(new Coordinate(posX, posY));
         for (int i = 0; i < distances.size(); i++) {
